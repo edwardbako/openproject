@@ -26,56 +26,41 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-class Settings::UpdateService < ::BaseServices::BaseContracted
-  def initialize(user:)
-    super user:,
-          contract_class: Settings::UpdateContract
+require 'spec_helper'
+
+describe Admin::Settings::WorkingDaysSettingsController do
+  before do
+    allow(@controller).to receive(:set_localization)
+    @params = {}
+
+    @user = create(:admin)
+    allow(User).to receive(:current).and_return @user
   end
 
-  def after_validate(params, call)
-    params.each do |name, value|
-      remember_previous_value(name)
-      set_setting_value(name, value)
+  describe 'show.html' do
+    def fetch
+      get 'show'
     end
 
-    call
+    it_behaves_like 'a controller action with require_admin'
   end
 
-  def after_perform(call)
-    super.tap do
-      params.each_key do |name|
-        run_on_change_callback(name)
-      end
-    end
-  end
+  describe 'show' do
+    render_views
 
-  private
+    it 'contains check boxes for the working days' do
+      get 'show'
 
-  def remember_previous_value(name)
-    previous_values[name] = Setting[name]
-  end
-
-  def set_setting_value(name, value)
-    Setting[name] = derive_value(value)
-  end
-
-  def previous_values
-    @previous_values ||= {}
-  end
-
-  def run_on_change_callback(name)
-    if (definition = Settings::Definition[name]) && definition.on_change
-      definition.on_change.call(previous_values[name])
+      expect(response).to be_successful
+      expect(response).to render_template 'admin/settings/working_days_settings/show'
     end
   end
 
-  def derive_value(value)
-    case value
-    when Array, Hash
-      # remove blank values in array, hash settings
-      value.compact_blank!
-    else
-      value.strip
+  describe 'update' do
+    it 'stores the working days settings if checked' do
+      patch 'update', params: { settings: { working_days: ['1', '2'] } }
+
+      expect(response).to redirect_to action: 'show'
     end
   end
 end

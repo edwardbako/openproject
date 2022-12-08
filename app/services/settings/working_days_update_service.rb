@@ -26,56 +26,11 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-class Settings::UpdateService < ::BaseServices::BaseContracted
-  def initialize(user:)
-    super user:,
-          contract_class: Settings::UpdateContract
-  end
-
-  def after_validate(params, call)
-    params.each do |name, value|
-      remember_previous_value(name)
-      set_setting_value(name, value)
-    end
-
-    call
-  end
-
-  def after_perform(call)
-    super.tap do
-      params.each_key do |name|
-        run_on_change_callback(name)
-      end
-    end
-  end
-
-  private
-
-  def remember_previous_value(name)
-    previous_values[name] = Setting[name]
-  end
-
-  def set_setting_value(name, value)
-    Setting[name] = derive_value(value)
-  end
-
-  def previous_values
-    @previous_values ||= {}
-  end
-
-  def run_on_change_callback(name)
-    if (definition = Settings::Definition[name]) && definition.on_change
-      definition.on_change.call(previous_values[name])
-    end
-  end
-
-  def derive_value(value)
-    case value
-    when Array, Hash
-      # remove blank values in array, hash settings
-      value.compact_blank!
-    else
-      value.strip
-    end
+class Settings::WorkingDaysUpdateService < Settings::UpdateService
+  def validate_params(params)
+    contract = Settings::WorkingDaysParamsContract.new(model, user, params:)
+    ServiceResult.new success: contract.valid?,
+                      errors: contract.errors,
+                      result: model
   end
 end

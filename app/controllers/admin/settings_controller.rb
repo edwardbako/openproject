@@ -50,8 +50,8 @@ module Admin
     def update
       return unless params[:settings]
 
-      call = ::Settings::UpdateService
-        .new(user: current_user, contract_options:)
+      call = update_service
+        .new(user: current_user)
         .call(settings_params)
 
       call.on_success { flash[:notice] = t(:notice_successful_update) }
@@ -94,8 +94,8 @@ module Admin
       permitted_params.settings.to_h
     end
 
-    def contract_options
-      {}
+    def update_service
+      ::Settings::UpdateService
     end
   end
 end

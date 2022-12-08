@@ -14,12 +14,18 @@ module Admin::Settings
 
     def settings_params
       settings = super
-      settings[:working_days] = settings[:working_days].compact_blank.map(&:to_i).uniq
+      settings[:working_days] = parse_working_days_params(settings)
       settings
     end
 
-    def contract_options
-      { params_contract: Settings::WorkingDaysParamsContract }
+    def update_service
+      ::Settings::WorkingDaysUpdateService
+    end
+
+    private
+
+    def parse_working_days_params(settings)
+      settings[:working_days] ? settings[:working_days].compact_blank.map(&:to_i).uniq : []
     end
   end
 end
