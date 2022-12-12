@@ -29,24 +29,16 @@
 require 'spec_helper'
 
 describe Admin::Settings::WorkingDaysSettingsController do
-  before do
-    allow(@controller).to receive(:set_localization)
-    @params = {}
+  shared_let(:user) { create(:admin) }
 
-    @user = create(:admin)
-    allow(User).to receive(:current).and_return @user
-  end
-
-  describe 'show.html' do
-    def fetch
-      get 'show'
-    end
-
-    it_behaves_like 'a controller action with require_admin'
-  end
+  current_user { user }
 
   describe 'show' do
-    render_views
+    describe 'permissions' do
+      let(:fetch) { get 'show' }
+
+      it_behaves_like 'a controller action with require_admin'
+    end
 
     it 'contains check boxes for the working days' do
       get 'show'
@@ -57,10 +49,45 @@ describe Admin::Settings::WorkingDaysSettingsController do
   end
 
   describe 'update' do
-    it 'stores the working days settings if checked' do
-      patch 'update', params: { settings: { working_days: ['1', '2'] } }
+    let(:working_days) { [*'1'..'7'] }
+    let(:non_working_days) { {} }
+    let(:params) do
+      { settings: { working_days:, non_working_days: } }
+    end
+
+    subject { patch 'update', params: }
+
+    it 'succeeds' do
+      subject
 
       expect(response).to redirect_to action: 'show'
+      expect(flash[:notice]).to eq I18n.t(:notice_successful_update)
+    end
+
+    context 'with non_working_days' do
+      let(:non_working_days) do
+        { '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' } }
+      end
+
+      it 'succeeds' do
+        subject
+
+        expect(response).to redirect_to action: 'show'
+        expect(flash[:notice]).to eq I18n.t(:notice_successful_update)
+      end
+
+      it 'creates the non_working_days' do
+        expect { subject }.to change(NonWorkingDay, :count).by(1)
+        expect(NonWorkingDay.first).to have_attributes(name: 'Christmas Eve', date: '2022-12-24')
+      end
+
+      it 'updates existing non_working_days' do
+        nwd = NonWorkingDay.create!(name: 'Christmas', date: '2022-12-24')
+        non_working_days["0"]["id"] = nwd.id.to_s
+
+        expect { subject }.not_to change(NonWorkingDay, :count)
+        expect(NonWorkingDay.first).to have_attributes(name: 'Christmas Eve', date: '2022-12-24')
+      end
     end
   end
 end

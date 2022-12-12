@@ -26,18 +26,23 @@
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-class Settings::UpdateService < ::BaseServices::BaseContracted
+class Settings::UpdateService < BaseServices::BaseContracted
   def initialize(user:)
     super user:,
           contract_class: Settings::UpdateContract
   end
 
   def after_validate(params, call)
+    params.keys.each(&method(:remember_previous_value))
+    call
+  end
+
+  # We will have a problem with error handling on the form.
+  # How can we still display the user changed values in case the form is not successfully saved?
+  def persist(call)
     params.each do |name, value|
-      remember_previous_value(name)
       set_setting_value(name, value)
     end
-
     call
   end
 

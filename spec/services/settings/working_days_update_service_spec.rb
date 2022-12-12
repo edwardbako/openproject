@@ -27,7 +27,7 @@
 require 'spec_helper'
 require_relative 'shared/shared_call_examples'
 
-describe Settings::UpdateService do
+describe Settings::WorkingDaysUpdateService do
   let(:instance) do
     described_class.new(user:)
   end
@@ -38,28 +38,20 @@ describe Settings::UpdateService do
                     errors: instance_double(ActiveModel::Error))
   end
   let(:contract_success) { true }
-  let(:setting_definition) do
-    instance_double(Settings::Definition,
-                    on_change: definition_on_change)
+  let(:params_contract) do
+    instance_double(Settings::WorkingDaysParamsContract,
+                    valid?: params_contract_success,
+                    errors: instance_double(ActiveModel::Error))
   end
-  let(:definition_on_change) do
-    instance_double(Proc,
-                    call: nil)
-  end
+  let(:params_contract_success) { true }
   let(:setting_name) { :a_setting_name }
   let(:new_setting_value) { 'a_new_setting_value' }
   let(:previous_setting_value) { 'the_previous_setting_value' }
-  let(:params) { { setting_name => new_setting_value } }
+  let(:setting_params) { { setting_name => new_setting_value } }
+  let(:params) { setting_params }
 
   before do
     # stub a setting definition
-    allow(Settings::Definition)
-      .to receive(:[])
-            .and_call_original
-    allow(Settings::Definition)
-      .to receive(:[])
-            .with(setting_name)
-            .and_return(setting_definition)
     allow(Setting)
       .to receive(:[])
           .and_call_original
@@ -73,6 +65,9 @@ describe Settings::UpdateService do
     allow(Settings::UpdateContract)
       .to receive(:new)
           .and_return(contract)
+    allow(Settings::WorkingDaysParamsContract)
+      .to receive(:new)
+          .and_return(params_contract)
   end
 
   describe '#call' do
@@ -80,11 +75,45 @@ describe Settings::UpdateService do
 
     include_examples 'successful call'
 
-    it 'calls the on_change handler' do
-      subject
+    context 'when non working days are present' do
+      let!(:existing_nwd) { create(:non_working_day) }
+      let!(:nwd_to_delete) { create(:non_working_day) }
+      let(:params) do
+        {
+          non_working_days: {
+            '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+            '1' => { 'name' => 'NYE', 'date' => '2022-12-31' },
+            '2' => { 'id' => existing_nwd.id },
+            '3' => { 'id' => nwd_to_delete.id, '_destroy' => true }
+          }
+        }
+      end
 
-      expect(definition_on_change)
-        .to have_received(:call).with(previous_setting_value)
+      include_examples 'successful call'
+
+      it 'persists the non working days' do
+        expect { subject }.to change(NonWorkingDay, :count).by(1)
+
+        expect(NonWorkingDay.all).to contain_exactly(
+          have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24')),
+          have_attributes(name: 'NYE', date: Date.parse('2022-12-31')),
+          have_attributes(existing_nwd.attributes)
+        )
+      end
+    end
+
+    context 'when the params contract is not successfully validated' do
+      let(:params_contract_success) { false }
+
+      include_examples 'unsuccessful call'
+
+      context 'when non working days are present' do
+        include_examples 'unsuccessful call'
+
+        it 'does not persists the non working days' do
+          expect { subject }.not_to change(NonWorkingDay, :count)
+        end
+      end
     end
 
     context 'when the contract is not successfully validated' do
@@ -92,11 +121,8 @@ describe Settings::UpdateService do
 
       include_examples 'unsuccessful call'
 
-      it 'does not call the on_change handler' do
-        subject
-
-        expect(definition_on_change)
-          .not_to have_received(:call)
+      context 'when non working days are present' do
+        include_examples 'unsuccessful call'
       end
     end
   end

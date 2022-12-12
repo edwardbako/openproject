@@ -27,10 +27,42 @@
 #++
 
 class Settings::WorkingDaysUpdateService < Settings::UpdateService
+  def call(params)
+    params = params.to_h.deep_symbolize_keys
+    self.non_working_days_params = params.delete(:non_working_days) || {}
+    super
+  end
+
   def validate_params(params)
     contract = Settings::WorkingDaysParamsContract.new(model, user, params:)
     ServiceResult.new success: contract.valid?,
                       errors: contract.errors,
                       result: model
+  end
+
+  def persist(call)
+    ActiveRecord::Base.transaction do
+      super
+      persist_non_working_days
+    end
+    call
+  end
+
+  private
+
+  attr_accessor :non_working_days_params
+
+  def persist_non_working_days
+    # We don't support update for now
+    to_create, to_delete = non_working_days_params
+                            .values
+                            .reduce([[], []]) do |results, nwd|
+      results.first << nwd if !nwd[:id]
+      results.last << nwd[:id] if nwd[:_destroy] && nwd[:id]
+      results
+    end
+
+    NonWorkingDay.insert_all!(to_create)
+    NonWorkingDay.delete(to_delete)
   end
 end
