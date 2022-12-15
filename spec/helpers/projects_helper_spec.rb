@@ -112,11 +112,25 @@ describe ProjectsHelper, type: :helper do
   end
 
   describe '#project_more_menu_items' do
-    context 'when project has activity module enable' do
+    let(:project) { create(:project) }
+
+    context 'when project does not have activity module enabled' do
+      before do
+        project.enabled_module_names -= ['activity']
+      end
+
+      it 'does not include a "Project Activity" entry' do
+        items = project_more_menu_items(project)
+        expect(items).to be_empty
+      end
+    end
+
+    context 'when project has activity module enabled' do
       it 'includes a "Project Activity" entry' do
-        project = Project.create!
         items = project_more_menu_items(project)
         expect(items).not_to be_empty
+        project_activity_entry = items.find { |entry| entry[0] == t(:label_project_activity) }
+        expect(project_activity_entry).not_to be_nil
       end
     end
   end
