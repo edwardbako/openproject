@@ -54,8 +54,8 @@ module Admin
         .new(user: current_user)
         .call(settings_params)
 
-      call.on_success { flash[:notice] = t(:notice_successful_update) }
-      call.on_failure { flash[:error] = call.message || I18n.t(:notice_internal_server_error) }
+      call.on_success { success_callback(call) }
+      call.on_failure { failure_callback(call) }
       redirect_to action: 'show', tab: params[:tab]
     end
 
@@ -96,6 +96,14 @@ module Admin
 
     def update_service
       ::Settings::UpdateService
+    end
+
+    def success_callback(_call)
+      flash[:notice] = t(:notice_successful_update)
+    end
+
+    def failure_callback(call)
+      flash[:error] = call.message || I18n.t(:notice_internal_server_error)
     end
   end
 end

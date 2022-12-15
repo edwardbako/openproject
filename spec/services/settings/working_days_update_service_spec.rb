@@ -92,12 +92,12 @@ describe Settings::WorkingDaysUpdateService do
       let!(:existing_nwd) { create(:non_working_day) }
       let!(:nwd_to_delete) { create(:non_working_day) }
       let(:non_working_days_params) do
-        {
-          '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
-          '1' => { 'name' => 'NYE', 'date' => '2022-12-31' },
-          '2' => { 'id' => existing_nwd.id },
-          '3' => { 'id' => nwd_to_delete.id, '_destroy' => true }
-        }
+        [
+          { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+          { 'name' => 'NYE', 'date' => '2022-12-31' },
+          { 'id' => existing_nwd.id },
+          { 'id' => nwd_to_delete.id, '_destroy' => true }
+        ]
       end
 
       include_examples 'successful call'
@@ -115,10 +115,10 @@ describe Settings::WorkingDaysUpdateService do
       context 'when there are duplicates' do
         context 'with both within the params' do
           let(:non_working_days_params) do
-            {
-              '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
-              '1' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' }
-            }
+            [
+              { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+              { 'name' => 'Christmas Eve', 'date' => '2022-12-24' }
+            ]
           end
 
           include_examples 'unsuccessful working days settings call'
@@ -126,7 +126,7 @@ describe Settings::WorkingDaysUpdateService do
 
         context 'with one saved in the database' do
           let(:non_working_days_params) do
-            { '0' => existing_nwd.slice(:name, :date) }
+            [existing_nwd.slice(:name, :date)]
           end
 
           include_examples 'unsuccessful working days settings call'
@@ -147,10 +147,10 @@ describe Settings::WorkingDaysUpdateService do
 
       context 'when non working days are present' do
         let(:non_working_days_params) do
-          {
-            '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
-            '1' => { 'name' => 'NYE', 'date' => '2022-12-31' }
-          }
+          [
+            { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+            { 'name' => 'NYE', 'date' => '2022-12-31' }
+          ]
         end
 
         include_examples 'unsuccessful working days settings call'

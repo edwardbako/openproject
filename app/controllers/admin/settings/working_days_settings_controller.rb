@@ -14,7 +14,8 @@ module Admin::Settings
 
     def settings_params
       settings = super
-      settings[:working_days] = parse_working_days_params(settings)
+      settings[:working_days] = working_days_params(settings)
+      settings[:non_working_days] = non_working_days_params
       settings
     end
 
@@ -24,8 +25,13 @@ module Admin::Settings
 
     private
 
-    def parse_working_days_params(settings)
+    def working_days_params(settings)
       settings[:working_days] ? settings[:working_days].compact_blank.map(&:to_i).uniq : []
+    end
+
+    def non_working_days_params
+      non_working_days = params.dig(:settings, :non_working_days)&.permit! || {}
+      non_working_days.to_h.values
     end
   end
 end

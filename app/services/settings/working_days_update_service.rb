@@ -29,7 +29,7 @@
 class Settings::WorkingDaysUpdateService < Settings::UpdateService
   def call(params)
     params = params.to_h.deep_symbolize_keys
-    self.non_working_days_params = params.delete(:non_working_days)&.values || []
+    self.non_working_days_params = params.delete(:non_working_days) || []
     super
   end
 

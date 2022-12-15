@@ -78,15 +78,7 @@ describe Admin::Settings::WorkingDaysSettingsController do
 
       it 'creates the non_working_days' do
         expect { subject }.to change(NonWorkingDay, :count).by(1)
-        expect(NonWorkingDay.first).to have_attributes(name: 'Christmas Eve', date: '2022-12-24')
-      end
-
-      it 'updates existing non_working_days' do
-        nwd = NonWorkingDay.create!(name: 'Christmas', date: '2022-12-24')
-        non_working_days["0"]["id"] = nwd.id.to_s
-
-        expect { subject }.not_to change(NonWorkingDay, :count)
-        expect(NonWorkingDay.first).to have_attributes(name: 'Christmas Eve', date: '2022-12-24')
+        expect(NonWorkingDay.first).to have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24'))
       end
     end
   end
