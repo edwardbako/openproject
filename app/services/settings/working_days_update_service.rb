@@ -29,7 +29,7 @@
 class Settings::WorkingDaysUpdateService < Settings::UpdateService
   def call(params)
     params = params.to_h.deep_symbolize_keys
-    self.non_working_days_params = params.delete(:non_working_days) || {}
+    self.non_working_days_params = params.delete(:non_working_days)&.values || []
     super
   end
 
@@ -42,9 +42,12 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
 
   def persist(call)
     ActiveRecord::Base.transaction do
-      super
-      persist_non_working_days
+      call.merge!(persist_non_working_days)
+      call.merge!(super) if call.success?
+
+      raise ActiveRecord::Rollback if call.failure?
     end
+
     call
   end
 
@@ -54,15 +57,36 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
 
   def persist_non_working_days
     # We don't support update for now
-    to_create, to_delete = non_working_days_params
-                            .values
-                            .reduce([[], []]) do |results, nwd|
+    to_create, to_delete = attributes_to_create_and_delete
+    results = create_records(to_create)
+    results.merge!(destroy_records(to_delete)) if results.success?
+    results
+  end
+
+  def attributes_to_create_and_delete
+    non_working_days_params.reduce([[], []]) do |results, nwd|
       results.first << nwd if !nwd[:id]
       results.last << nwd[:id] if nwd[:_destroy] && nwd[:id]
       results
     end
+  end
 
-    NonWorkingDay.insert_all!(to_create)
-    NonWorkingDay.delete(to_delete)
+  def create_records(attributes)
+    records = attributes.map { |attrs| NonWorkingDay.create(attrs) }
+    wrap_results records
+  end
+
+  def destroy_records(ids)
+    records = NonWorkingDay.where(id: ids).destroy_all
+    wrap_results records
+  end
+
+  def wrap_results(records)
+    result = NonWorkingDay.new
+    errors = result.errors
+    records.each { |record| errors.merge!(record.errors) }
+    success = errors.empty?
+
+    ServiceResult.new success:, errors:, result:
   end
 end

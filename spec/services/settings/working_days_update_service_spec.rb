@@ -48,7 +48,8 @@ describe Settings::WorkingDaysUpdateService do
   let(:new_setting_value) { 'a_new_setting_value' }
   let(:previous_setting_value) { 'the_previous_setting_value' }
   let(:setting_params) { { setting_name => new_setting_value } }
-  let(:params) { setting_params }
+  let(:non_working_days_params) { {} }
+  let(:params) { setting_params.merge(non_working_days: non_working_days_params) }
 
   before do
     # stub a setting definition
@@ -73,38 +74,7 @@ describe Settings::WorkingDaysUpdateService do
   describe '#call' do
     subject { instance.call(params) }
 
-    include_examples 'successful call'
-
-    context 'when non working days are present' do
-      let!(:existing_nwd) { create(:non_working_day) }
-      let!(:nwd_to_delete) { create(:non_working_day) }
-      let(:params) do
-        {
-          non_working_days: {
-            '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
-            '1' => { 'name' => 'NYE', 'date' => '2022-12-31' },
-            '2' => { 'id' => existing_nwd.id },
-            '3' => { 'id' => nwd_to_delete.id, '_destroy' => true }
-          }
-        }
-      end
-
-      include_examples 'successful call'
-
-      it 'persists the non working days' do
-        expect { subject }.to change(NonWorkingDay, :count).by(1)
-
-        expect(NonWorkingDay.all).to contain_exactly(
-          have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24')),
-          have_attributes(name: 'NYE', date: Date.parse('2022-12-31')),
-          have_attributes(existing_nwd.attributes)
-        )
-      end
-    end
-
-    context 'when the params contract is not successfully validated' do
-      let(:params_contract_success) { false }
-
+    shared_examples 'unsuccessful working days settings call' do
       include_examples 'unsuccessful call'
 
       context 'when non working days are present' do
@@ -116,13 +86,74 @@ describe Settings::WorkingDaysUpdateService do
       end
     end
 
+    include_examples 'successful call'
+
+    context 'when non working days are present' do
+      let!(:existing_nwd) { create(:non_working_day) }
+      let!(:nwd_to_delete) { create(:non_working_day) }
+      let(:non_working_days_params) do
+        {
+          '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+          '1' => { 'name' => 'NYE', 'date' => '2022-12-31' },
+          '2' => { 'id' => existing_nwd.id },
+          '3' => { 'id' => nwd_to_delete.id, '_destroy' => true }
+        }
+      end
+
+      include_examples 'successful call'
+
+      it 'persists (create/delete) the non working days' do
+        expect { subject }.to change(NonWorkingDay, :count).by(1)
+
+        expect(NonWorkingDay.all).to contain_exactly(
+          have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24')),
+          have_attributes(name: 'NYE', date: Date.parse('2022-12-31')),
+          have_attributes(existing_nwd.attributes)
+        )
+      end
+
+      context 'when there are duplicates' do
+        context 'with both within the params' do
+          let(:non_working_days_params) do
+            {
+              '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+              '1' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' }
+            }
+          end
+
+          include_examples 'unsuccessful working days settings call'
+        end
+
+        context 'with one saved in the database' do
+          let(:non_working_days_params) do
+            { '0' => existing_nwd.slice(:name, :date) }
+          end
+
+          include_examples 'unsuccessful working days settings call'
+        end
+      end
+    end
+
+    context 'when the params contract is not successfully validated' do
+      let(:params_contract_success) { false }
+
+      include_examples 'unsuccessful working days settings call'
+    end
+
     context 'when the contract is not successfully validated' do
       let(:contract_success) { false }
 
-      include_examples 'unsuccessful call'
+      include_examples 'unsuccessful working days settings call'
 
       context 'when non working days are present' do
-        include_examples 'unsuccessful call'
+        let(:non_working_days_params) do
+          {
+            '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+            '1' => { 'name' => 'NYE', 'date' => '2022-12-31' }
+          }
+        end
+
+        include_examples 'unsuccessful working days settings call'
       end
     end
   end
