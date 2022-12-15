@@ -12,6 +12,8 @@ module Admin::Settings
       true
     end
 
+    protected
+
     def settings_params
       settings = super
       settings[:working_days] = working_days_params(settings)
@@ -30,7 +32,7 @@ module Admin::Settings
     end
 
     def non_working_days_params
-      non_working_days = params.dig(:settings, :non_working_days)&.permit! || {}
+      non_working_days = params[:settings].to_unsafe_hash[:non_working_days] || {}
       non_working_days.to_h.values
     end
   end
