@@ -110,4 +110,14 @@ describe ProjectsHelper, type: :helper do
         .to eql(((('Abcd ' * 5) + "\n") * 10)[0..-2] + '...')
     end
   end
+
+  describe '#project_more_menu_items' do
+    context 'when project has activity module enable' do
+      it 'includes a "Project Activity" entry' do
+        project = Project.create!
+        items = project_more_menu_items(project)
+        expect(items).not_to be_empty
+      end
+    end
+  end
 end
