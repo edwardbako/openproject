@@ -13,7 +13,7 @@ module Admin::Settings
     end
 
     def failure_callback(call)
-      @modified_non_working_days = call.dependent_results.collect(&:result)
+      @modified_non_working_days = call.result
       flash[:error] = call.message || I18n.t(:notice_internal_server_error)
       render action: 'show', tab: params[:tab]
     end

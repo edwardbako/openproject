@@ -62,7 +62,9 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
     # We don't support update for now
     to_create, to_delete = attributes_to_create_and_delete
     results = create_records(to_create)
-    results.merge!(destroy_records(to_delete))
+    destroy_results = destroy_records(to_delete)
+    results.merge!(destroy_results)
+    results.result = Array(results.result) + Array(destroy_results.result)
     results
   end
 
@@ -75,26 +77,22 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
   end
 
   def create_records(attributes)
-    wrap_results(attributes.map { |attrs| NonWorkingDay.create(attrs) })
+    wrap_result(attributes.map { |attrs| NonWorkingDay.create(attrs) })
   end
 
   def destroy_records(ids)
-    wrap_results NonWorkingDay.where(id: ids).destroy_all
+    wrap_result NonWorkingDay.where(id: ids).destroy_all
   end
 
-  def wrap_results(records)
-    result = NonWorkingDay.new
-    errors = result.errors
-    results = ServiceResult.success(errors:, result:)
-
-    records.each do |r|
-      results.add_dependent!(
-        ServiceResult.new(success: r.errors.empty?, errors: r.errors, result: r)
-      )
-      # The ServiceResult.add_dependent! does not merge the errors with the parent by design.
-      # To have a summarized error message, all errors are merged to the parent ServiceResult.
-      results.errors.merge!(r.errors)
+  def wrap_result(result)
+    model = NonWorkingDay.new
+    errors = model.errors.tap do |err|
+      result.each do |r|
+        err.merge!(r.errors)
+      end
     end
-    results
+    success = model.errors.empty?
+
+    ServiceResult.new(success:, errors:, result:)
   end
 end
