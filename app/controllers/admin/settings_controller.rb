@@ -56,7 +56,6 @@ module Admin
 
       call.on_success { success_callback(call) }
       call.on_failure { failure_callback(call) }
-      redirect_to action: 'show', tab: params[:tab]
     end
 
     def show_plugin
@@ -99,11 +98,13 @@ module Admin
     end
 
     def success_callback(_call)
-      flash.now[:notice] = t(:notice_successful_update)
+      flash[:notice] = t(:notice_successful_update)
+      redirect_to action: 'show', tab: params[:tab]
     end
 
     def failure_callback(call)
-      flash.now[:error] = call.message || I18n.t(:notice_internal_server_error)
+      flash[:error] = call.message || I18n.t(:notice_internal_server_error)
+      redirect_to action: 'show', tab: params[:tab]
     end
   end
 end

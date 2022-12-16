@@ -41,14 +41,17 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
   end
 
   def persist(call)
+    results = call
     ActiveRecord::Base.transaction do
-      call.merge!(persist_non_working_days)
-      call.merge!(super) if call.success?
+      # The order of merging the service is important to preserve
+      # the errors model's base object, which is a NonWorkingDay
+      results = persist_non_working_days
+      results.merge!(super) if results.success?
 
-      raise ActiveRecord::Rollback if call.failure?
+      raise ActiveRecord::Rollback if results.failure?
     end
 
-    call
+    results
   end
 
   private
@@ -59,7 +62,7 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
     # We don't support update for now
     to_create, to_delete = attributes_to_create_and_delete
     results = create_records(to_create)
-    results.merge!(destroy_records(to_delete)) if results.success?
+    results.merge!(destroy_records(to_delete))
     results
   end
 
@@ -84,12 +87,14 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
     errors = result.errors
     results = ServiceResult.success(errors:, result:)
 
-    records.map do |r|
+    records.each do |r|
       results.add_dependent!(
         ServiceResult.new(success: r.errors.empty?, errors: r.errors, result: r)
       )
+      # The ServiceResult.add_dependent! does not merge the errors with the parent by design.
+      # To have a summarized error message, all errors are merged to the parent ServiceResult.
+      results.errors.merge!(r.errors)
     end
-
     results
   end
 end

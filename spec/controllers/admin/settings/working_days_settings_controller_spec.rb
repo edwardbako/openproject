@@ -81,5 +81,37 @@ describe Admin::Settings::WorkingDaysSettingsController do
         expect(NonWorkingDay.first).to have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24'))
       end
     end
+
+    context 'when fails with a duplicate entry' do
+      let(:nwd_to_delete) { create(:non_working_day, name: 'NWD to delete') }
+      let(:non_working_days) do
+        {
+          '0' => { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
+          '1' => { 'name' => 'Christmas Eve2', 'date' => '2022-12-24' },
+          '2' => { 'id' => nwd_to_delete.id, '_destroy' => true }
+        }
+      end
+
+      it 'displays the error message' do
+        subject
+
+        expect(response).to render_template :show
+        expect(flash[:error]).to eq 'A non-working day already exists for 2022-12-24.'
+      end
+
+      it 'sets the @modified_non_working_days variable' do
+        subject
+        expect(assigns(:modified_non_working_days)).to contain_exactly(
+          have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24')),
+          have_attributes(name: 'Christmas Eve2', date: Date.parse('2022-12-24')),
+          have_attributes(nwd_to_delete.slice(:id, :name, :date))
+        )
+      end
+
+      it 'does not destroys other records' do
+        subject
+        expect { nwd_to_delete.reload }.not_to raise_error
+      end
+    end
   end
 end

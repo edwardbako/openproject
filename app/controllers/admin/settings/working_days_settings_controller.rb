@@ -12,6 +12,12 @@ module Admin::Settings
       true
     end
 
+    def failure_callback(call)
+      @modified_non_working_days = call.dependent_results.collect(&:result)
+      flash[:error] = call.message || I18n.t(:notice_internal_server_error)
+      render action: 'show', tab: params[:tab]
+    end
+
     protected
 
     def settings_params
