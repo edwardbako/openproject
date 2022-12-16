@@ -89,8 +89,8 @@ describe Settings::WorkingDaysUpdateService do
     include_examples 'successful call'
 
     context 'when non working days are present' do
-      let!(:existing_nwd) { create(:non_working_day) }
-      let!(:nwd_to_delete) { create(:non_working_day) }
+      let!(:existing_nwd) { create(:non_working_day, name: 'Existing NWD') }
+      let!(:nwd_to_delete) { create(:non_working_day, name: 'NWD to delete') }
       let(:non_working_days_params) do
         [
           { 'name' => 'Christmas Eve', 'date' => '2022-12-24' },
@@ -104,6 +104,8 @@ describe Settings::WorkingDaysUpdateService do
 
       it 'persists (create/delete) the non working days' do
         expect { subject }.to change(NonWorkingDay, :count).by(1)
+
+        expect { nwd_to_delete.reload }.to raise_error(ActiveRecord::RecordNotFound)
 
         expect(NonWorkingDay.all).to contain_exactly(
           have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24')),
