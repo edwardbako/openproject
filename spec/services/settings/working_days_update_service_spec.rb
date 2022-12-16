@@ -110,7 +110,7 @@ describe Settings::WorkingDaysUpdateService do
         expect(NonWorkingDay.all).to contain_exactly(
           have_attributes(name: 'Christmas Eve', date: Date.parse('2022-12-24')),
           have_attributes(name: 'NYE', date: Date.parse('2022-12-31')),
-          have_attributes(existing_nwd.attributes)
+          have_attributes(existing_nwd.slice(:id, :name, :date))
         )
       end
 
