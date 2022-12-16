@@ -72,21 +72,24 @@ class Settings::WorkingDaysUpdateService < Settings::UpdateService
   end
 
   def create_records(attributes)
-    records = attributes.map { |attrs| NonWorkingDay.create(attrs) }
-    wrap_results records
+    wrap_results(attributes.map { |attrs| NonWorkingDay.create(attrs) })
   end
 
   def destroy_records(ids)
-    records = NonWorkingDay.where(id: ids).destroy_all
-    wrap_results records
+    wrap_results NonWorkingDay.where(id: ids).destroy_all
   end
 
   def wrap_results(records)
     result = NonWorkingDay.new
     errors = result.errors
-    records.each { |record| errors.merge!(record.errors) }
-    success = errors.empty?
+    results = ServiceResult.success(errors:, result:)
 
-    ServiceResult.new success:, errors:, result:
+    records.map do |r|
+      results.add_dependent!(
+        ServiceResult.new(success: r.errors.empty?, errors: r.errors, result: r)
+      )
+    end
+
+    results
   end
 end
