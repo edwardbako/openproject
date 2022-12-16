@@ -99,11 +99,11 @@ module Admin
     end
 
     def success_callback(_call)
-      flash[:notice] = t(:notice_successful_update)
+      flash.now[:notice] = t(:notice_successful_update)
     end
 
     def failure_callback(call)
-      flash[:error] = call.message || I18n.t(:notice_internal_server_error)
+      flash.now[:error] = call.message || I18n.t(:notice_internal_server_error)
     end
   end
 end
