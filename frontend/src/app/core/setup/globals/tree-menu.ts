@@ -53,7 +53,19 @@
       return false;
     }
 
+    function collapse_all(event:any) {
+      if (event.type === 'keypress' && event.which !== 13) {
+        return false;
+      }
+
+      const targetList = $('ul.-with-hierarchy > li');
+      targetList.removeClass('-hierarchy-expanded');
+      targetList.addClass('-hierarchy-collapsed ');
+      return false;
+    }
+
     // set click handlers for expanding and collapsing tree nodes
     $('.pages-hierarchy.-with-hierarchy .tree-menu--hierarchy-span').on('click keypress', toggle);
+    $('.pages-hierarchy .collapse_all').on('click keypress', collapse_all);
   });
 }(jQuery));

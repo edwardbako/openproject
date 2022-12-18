@@ -43,6 +43,18 @@ module OpenProject
       end
     end
 
+    def render_collapse_all
+      content_tag :ul, class: "pages-hierarchy -with-hierarchy" do
+        content_tag :li, class: '-hierarchy-expanded' do
+          content_tag(:span, class: 'tree-menu--item') do
+            link_to(::I18n.t(:label_collapse_all),
+                    nil,
+                    class: 'tree-menu--title ellipsis collapse_all')
+          end
+        end
+      end
+    end
+
     private
 
     def render_hierarchy_item(page, is_parent, options = {})

@@ -1562,6 +1562,7 @@ ru:
   label_close_versions: "Закрыть завершённые этапы"
   label_closed_work_packages: "закрыт"
   label_collapse: "свернуть"
+  label_collapse_all: "Свернуть все"
   label_collapsed_click_to_show: "Свернуто. Кликните для показа"
   label_configuration: Настройки
   label_comment_add: "Добавить комментарий"
